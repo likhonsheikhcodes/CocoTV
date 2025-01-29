@@ -3,49 +3,86 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cocomelon Video Player</title>
+    <title>Coco TV - Watch HD Videos</title>
+    <meta name="description" content="Watch and stream high-quality videos online for free on Coco TV.">
+    <meta name="keywords" content="Coco TV, free videos, online streaming, HD videos, watch videos">
+    <meta name="author" content="Coco TV">
+
+    <!-- Open Graph (OG) Meta -->
+    <meta property="og:title" content="Coco TV - Watch HD Videos">
+    <meta property="og:description" content="Watch and stream high-quality videos online for free on Coco TV.">
+    <meta property="og:image" content="https://coco-tv.vercel.app/preview.png">
+    <meta property="og:url" content="https://coco-tv.vercel.app/">
+    <meta property="og:type" content="video.movie">
+
+    <!-- JSON-LD Structured Data -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "VideoObject",
+        "name": "Coco TV - Watch HD Videos",
+        "description": "Stream high-quality videos online for free.",
+        "thumbnailUrl": "https://coco-tv.vercel.app/preview.png",
+        "uploadDate": "2022-01-12",
+        "publisher": {
+            "@type": "Organization",
+            "name": "Coco TV",
+            "logo": "https://coco-tv.vercel.app/logo.png"
+        }
+    }
+    </script>
+
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            background: #f8f9fa;
-            text-align: center;
+        * {
             margin: 0;
             padding: 0;
+            box-sizing: border-box;
+            font-family: 'Arial', sans-serif;
+        }
+        body {
+            background: #181818;
+            color: white;
+            text-align: center;
         }
         h1 {
-            color: #333;
             padding: 20px;
+            font-size: 26px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
         }
         .container {
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
-            gap: 15px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
             padding: 20px;
+            max-width: 1200px;
+            margin: auto;
         }
         .video-card {
-            width: 250px;
-            background: #fff;
-            padding: 10px;
+            background: #222;
+            padding: 15px;
             border-radius: 10px;
-            box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
-            text-align: center;
+            box-shadow: 0 4px 10px rgba(255, 255, 255, 0.1);
+            transition: transform 0.2s, background 0.2s;
             cursor: pointer;
-            transition: transform 0.2s;
         }
         .video-card:hover {
             transform: scale(1.05);
+            background: #333;
         }
         .video-card img {
             width: 100%;
             border-radius: 10px;
         }
         .video-card p {
+            font-size: 14px;
             font-weight: bold;
-            margin-top: 5px;
+            margin-top: 10px;
         }
         .video-card small {
-            color: #666;
+            display: block;
+            margin-top: 5px;
+            color: #aaa;
         }
         .video-player {
             display: none;
@@ -54,12 +91,13 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.8);
+            background: rgba(0, 0, 0, 0.9);
             justify-content: center;
             align-items: center;
+            z-index: 1000;
         }
         .video-player video {
-            width: 80%;
+            width: 90%;
             max-width: 800px;
         }
         .close-btn {
@@ -70,11 +108,22 @@
             color: white;
             cursor: pointer;
         }
+        .error-box {
+            background: red;
+            color: white;
+            padding: 10px;
+            margin: 20px auto;
+            display: none;
+            width: 80%;
+            border-radius: 5px;
+        }
     </style>
 </head>
 <body>
 
-    <h1>Cocomelon Video Collection</h1>
+    <h1>📺 Coco TV - HD Video Streaming</h1>
+
+    <div class="error-box" id="errorBox"></div>
 
     <div class="container" id="videoList"></div>
 
@@ -86,10 +135,14 @@
     <script>
         const xmlURL = "https://ia804601.us.archive.org/2/items/cocomelon_202201/cocomelon_202201_files.xml";
         const baseURL = "https://ia804601.us.archive.org/2/items/cocomelon_202201/";
+        let videoQueue = [];
+        let currentIndex = 0;
 
         async function loadVideos() {
             try {
                 const response = await fetch(xmlURL);
+                if (!response.ok) throw new Error("Failed to load video list. Please try again later.");
+                
                 const text = await response.text();
                 const parser = new DOMParser();
                 const xml = parser.parseFromString(text, "text/xml");
@@ -99,12 +152,13 @@
 
                 for (let file of files) {
                     const name = file.getAttribute("name");
-                    if (!name.endsWith(".mp4")) continue;
+                    if (!name.endsWith(".mp4")) continue; 
 
                     const size = (file.querySelector("size").textContent / (1024 * 1024)).toFixed(1) + " MB";
                     const duration = parseFloat(file.querySelector("length").textContent).toFixed(2) + " sec";
                     const resolution = file.querySelector("width").textContent + "x" + file.querySelector("height").textContent;
                     const videoURL = baseURL + name;
+                    videoQueue.push(videoURL);
 
                     const videoCard = document.createElement("div");
                     videoCard.classList.add("video-card");
@@ -113,25 +167,39 @@
                         <p>${name}</p>
                         <small>${size} | ${duration} | ${resolution}</small>
                     `;
-                    videoCard.onclick = () => playVideo(videoURL);
+                    videoCard.onclick = () => playVideo(videoQueue.indexOf(videoURL));
                     videoList.appendChild(videoCard);
                 }
             } catch (error) {
-                console.error("Error loading videos:", error);
+                showError(error.message);
             }
         }
 
-        function playVideo(src) {
+        function playVideo(index) {
+            currentIndex = index;
             document.getElementById("player").style.display = "flex";
-            const videoPlayer = document.getElementById("videoPlayer");
-            videoPlayer.src = src;
-            videoPlayer.play();
+            document.getElementById("videoPlayer").src = videoQueue[index];
+            document.getElementById("videoPlayer").play();
+            document.getElementById("videoPlayer").onended = nextVideo;
+        }
+
+        function nextVideo() {
+            if (currentIndex < videoQueue.length - 1) {
+                playVideo(currentIndex + 1);
+            } else {
+                closePlayer();
+            }
         }
 
         function closePlayer() {
             document.getElementById("player").style.display = "none";
-            const videoPlayer = document.getElementById("videoPlayer");
-            videoPlayer.pause();
+            document.getElementById("videoPlayer").pause();
+        }
+
+        function showError(message) {
+            const errorBox = document.getElementById("errorBox");
+            errorBox.innerText = message;
+            errorBox.style.display = "block";
         }
 
         loadVideos();
