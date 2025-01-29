@@ -32,6 +32,7 @@
     }
     </script>
 
+    <!-- Styles -->
     <style>
         * {
             margin: 0;
@@ -65,6 +66,8 @@
             box-shadow: 0 4px 10px rgba(255, 255, 255, 0.1);
             transition: transform 0.2s, background 0.2s;
             cursor: pointer;
+            position: relative;
+            overflow: hidden;
         }
         .video-card:hover {
             transform: scale(1.05);
@@ -73,6 +76,10 @@
         .video-card img {
             width: 100%;
             border-radius: 10px;
+            transition: transform 0.3s;
+        }
+        .video-card:hover img {
+            transform: scale(1.1);
         }
         .video-card p {
             font-size: 14px;
@@ -99,6 +106,7 @@
         .video-player video {
             width: 90%;
             max-width: 800px;
+            border-radius: 10px;
         }
         .close-btn {
             position: absolute;
@@ -107,6 +115,13 @@
             font-size: 24px;
             color: white;
             cursor: pointer;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 50%;
+            padding: 5px;
+            transition: background 0.2s;
+        }
+        .close-btn:hover {
+            background: rgba(0, 0, 0, 0.8);
         }
         .error-box {
             background: red;
@@ -116,6 +131,7 @@
             display: none;
             width: 80%;
             border-radius: 5px;
+            max-width: 600px;
         }
     </style>
 </head>
